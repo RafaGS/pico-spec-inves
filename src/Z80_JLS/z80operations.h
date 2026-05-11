@@ -39,6 +39,7 @@ public:
     static bool is48;
     static bool isByte;
     static bool isALF;
+    static bool isInves;
     static bool is128;
     static bool isPentagon;
     static bool is512;

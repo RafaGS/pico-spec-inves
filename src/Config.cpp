@@ -14,8 +14,8 @@
 #include "graphics.h"
 #include <hardware/vreg.h>
 
-string   Config::arch = "48K";
-string   Config::romSet = "48K";
+string   Config::arch = "INVES";
+string   Config::romSet = "INVES";
 string   Config::romSet48 = "48K";
 string   Config::romSet128 = "128K";
 string   Config::romSetPent = "128Kp";
@@ -196,6 +196,11 @@ void Config::requestMachine(const string& newArch, const string& newRomSet)
             MemESP::rom[0].assign_rom(Config::byte_cobmect_mode ? gb_rom_0_byte_sovmest_48k : gb_rom_0_byte_48k);
         else
             MemESP::rom[0].assign_rom(gb_rom_0_sinclair_48k);
+    } else if (arch == "INVES") {
+        romSet = "INVES";
+        MemESP::rom[0].assign_rom(gb_rom_0_inves);
+        // Inves has integrated Kempston on fixed port 0x1F.
+        Config::kempstonPort = 0x1F;
     }
 #if !NO_ALF
     else if (arch == "ALF") {
@@ -432,6 +437,11 @@ void Config::load() {
         #endif
         nvs_get_str("arch", arch, sts);
         nvs_get_str("romSet", romSet, sts);
+        // Migrate legacy config saved before INVES was the primary machine
+        if (arch == "48K" && romSet == "48K") {
+            arch = "INVES";
+            romSet = "INVES";
+        }
         nvs_get_str("romSet48", romSet48, sts);
         nvs_get_str("romSet128", romSet128, sts);
         nvs_get_str("romSetPent", romSetPent, sts);
@@ -540,6 +550,10 @@ void Config::load() {
         nvs_get_u8("joy2cursor", Config::joy2cursor, sts);
         nvs_get_u8("secondJoy", Config::secondJoy, sts);
         nvs_get_u8("kempstonPort", Config::kempstonPort, sts);
+        if (Config::arch == "INVES") {
+            // Keep Inves mapping fixed regardless of persisted settings.
+            Config::kempstonPort = 0x1F;
+        }
         nvs_get_u8("ayConfig", Config::ayConfig, sts);
         nvs_get_u8("turbosound", Config::turbosound, sts);
         nvs_get_u8("covox", Config::covox, sts);

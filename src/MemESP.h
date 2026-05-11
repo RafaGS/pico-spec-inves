@@ -201,6 +201,7 @@ public:
 
 // ==== Функция получения задержки для адреса ====
 inline int MemESP::getByteContention(uint16_t addr) {
+    if (Config::arch == "INVES") return 0;
     if (addr < 0xC000) return 0;
 
     int res = 0;
@@ -257,6 +258,11 @@ inline void MemESP::writebyte(uint16_t addr, uint8_t data)
         return;
     }
 #endif
+    if (Config::arch == "INVES" && page == 0) {
+        // Inves hidden RAM: writes under ROM always modify physical RAM page 0.
+        MemESP::ram[0].write(addr & 0x3fff, data);
+        return;
+    }
     uint8_t* p = ramCurrent[page];
     if (p < (uint8_t*)0x11000000) return;
     p[addr & 0x3fff] = data;

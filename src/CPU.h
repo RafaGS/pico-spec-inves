@@ -40,16 +40,23 @@ visit https://zxespectrum.speccy.org/contacto
 #include "ESPectrum.h"
 
 #define TSTATES_PER_FRAME_48 69888
+#define TSTATES_PER_FRAME_INVES 70908
 #define TSTATES_PER_FRAME_128 70908
 #define TSTATES_PER_FRAME_PENTAGON 71680
 
 #define MICROS_PER_FRAME_48 19968
+#define MICROS_PER_FRAME_INVES 19992
 #define MICROS_PER_FRAME_128 19992
 #define MICROS_PER_FRAME_PENTAGON 20480
 
 #define INT_START48 0
 #define INT_END48 32
 #define INT_END_BYTE48 33
+// Inves: INT starts 212 T-states before first screen-byte fetch.
+// first paper line = 70, first fetch in line = T53 => 70*228+53 = 16013.
+// INT start = 16013 - 212 = 15801.
+#define INT_START_INVES 15801
+#define INT_END_INVES 15837  // Duration of INT signal (36 T-states as in other systems)
 #define INT_START128 0
 #define INT_END128 36 // 35 in real +2 and Weiv's Spectramine. I'll have to check those numbers
 #define INT_START_PENTAGON 0

@@ -88,6 +88,15 @@ uint8_t Ports::portAFF7 = 0;
 Ports::PIT8253Channel Ports::pitChannels[3] = {};
 #endif
 
+static inline uint8_t beeperIndexFromFeData(uint8_t data) {
+  if (Z80Ops::isInves) {
+    // Inves TAHC10: MIC(bit3) XOR SPK(bit4), no analog sum between both bits.
+    uint8_t beeperOn = ((data >> 3) ^ (data >> 4)) & 0x01;
+    return (beeperOn << 2) | (Tape::tapeEarBit << 1);
+  }
+  return ((data >> 2) & 0x04) | (Tape::tapeEarBit << 1) | ((data >> 3) & 0x01);
+}
+
 uint8_t (*Ports::getFloatBusData)() = &Ports::getFloatBusData48;
 
 IRAM_ATTR uint8_t Ports::getFloatBusData48() {
@@ -198,7 +207,7 @@ IRAM_ATTR uint8_t Ports::input(uint16_t address) {
     // Early contention depends on ADDRESS (contended memory?), not port type
     // Wiki: ULA port non-contended addr = N:1,C:3; contended addr = C:1,C:3
     //        Non-ULA contended addr = C:1,C:1,C:1,C:1; non-contended = N:4
-    VIDEO::Draw(1, MemESP::ramContended[rambank]); // I/O Contention (Early)
+    VIDEO::Draw(1, !Z80Ops::isInves && MemESP::ramContended[rambank]); // I/O Contention (Early)
   }
 
   if (MEM_PG_CNT > 64 && address == 0xAFF7) {
@@ -220,7 +229,7 @@ IRAM_ATTR uint8_t Ports::input(uint16_t address) {
   }
   // ULA PORT
   if ((address & 0x0001) == 0) {
-    VIDEO::Draw(3, !Z80Ops::isPentagon); // I/O Contention (Late)
+    VIDEO::Draw(3, !Z80Ops::isPentagon && !Z80Ops::isInves); // I/O Contention (Late)
     if (ia && p8 == 0xFE) {
       data = nes_pad2_for_alf(); // default port value is 0xFF.
     } else {
@@ -251,6 +260,12 @@ IRAM_ATTR uint8_t Ports::input(uint16_t address) {
         data ^= 0x40;
     }
   } else {
+    if (Z80Ops::isInves) {
+      // Inves: odd ports use loose Kempston decoding; everything else reads 0xFF.
+      if ((address & 0x0020) == 0)
+        return port[0x1F] & 0x1F;
+      return 0xFF;
+    }
     ioContentionLate(MemESP::ramContended[rambank]);
 #ifndef NO_ALF
     if (ia && bitRead(p8, 7) == 0) {
@@ -406,16 +421,9 @@ IRAM_ATTR uint8_t Ports::input(uint16_t address) {
     }
 
     // Kempston Joystick
-    // Standard Kempston decodes A5=0 (so port 0x1F catches 0x00..0x1F).
-    // Non-standard kempstonPort values (0x37, 0x5F) use exact low-byte match.
-    if (Config::joystick == JOY_KEMPSTON) {
-      bool kempston_hit = (Config::kempstonPort == 0x1F)
-                              ? ((p8 & 0x20) == 0)
-                              : (p8 == Config::kempstonPort);
-      if (kempston_hit)
-        return ia ? (port[Config::kempstonPort] ^ 0xA0)
-                  : port[Config::kempstonPort];
-    }
+    if ((Config::joystick == JOY_KEMPSTON) &&
+        ((address & 0x00E0) == 0 || p8 == 0xDF || p8 == Config::kempstonPort))
+      return ia ? (port[0x1F] ^ 0xA0) : port[Config::kempstonPort];
 
     // Fuller Joystick
     if (Config::joystick == JOY_FULLER && p8 == 0x7F)
@@ -491,7 +499,7 @@ IRAM_ATTR void Ports::output(uint16_t address, uint8_t data) {
     // Wiki: ULA port non-contended addr = N:1,C:3; contended addr = C:1,C:3
     //       Non-ULA contended addr = C:1,C:1,C:1,C:1; non-contended = N:4
     // Matches Ports::input behavior for symmetry.
-    VIDEO::Draw(1, MemESP::ramContended[rambank]); // I/O Contention (Early)
+    VIDEO::Draw(1, !Z80Ops::isInves && MemESP::ramContended[rambank]); // I/O Contention (Early)
   }
   uint8_t a8 = (address & 0xFF);
   p_states = CPU::tstates;
@@ -577,12 +585,13 @@ IRAM_ATTR void Ports::output(uint16_t address, uint8_t data) {
       Audiobit = Tape::tapeEarBit ? 255 : 0; // For tape player mode
     else
       // Beeper Audio
-      Audiobit = speaker_values[((data >> 2) & 0x04) | (Tape::tapeEarBit << 1) |
-                                ((data >> 3) & 0x01)];
+      Audiobit = speaker_values[beeperIndexFromFeData(data)];
     if (Audiobit != ESPectrum::lastaudioBit) {
       ESPectrum::BeeperGetSample();
       ESPectrum::lastaudioBit = Audiobit;
     }
+    if (Z80Ops::isInves)
+      return;
     // AY
     // ========================================================================
     if ((ESPectrum::AY_emu) && ((address & 0x8002) == 0x8000)) {
@@ -592,7 +601,7 @@ IRAM_ATTR void Ports::output(uint16_t address, uint8_t data) {
         if (Tape::tapeStatus != TAPE_LOADING) ESPectrum::AYGetSample();
         chips[AySound::selected_chip]->setRegisterData(data);
       }
-      VIDEO::Draw(3, !Z80Ops::isPentagon); // I/O Contention (Late)
+      VIDEO::Draw(3, !Z80Ops::isPentagon && !Z80Ops::isInves); // I/O Contention (Late)
       return;
     }
 #if !PICO_RP2040
@@ -626,7 +635,7 @@ IRAM_ATTR void Ports::output(uint16_t address, uint8_t data) {
       }
     }
 #endif
-    VIDEO::Draw(3, !Z80Ops::isPentagon); // I/O Contention (Late)
+    VIDEO::Draw(3, !Z80Ops::isPentagon && !Z80Ops::isInves); // I/O Contention (Late)
   } else {
 #if !PICO_RP2040
     // ULA+ ports (odd addresses: 0xBF3B register select, 0xFF3B data)
@@ -976,6 +985,10 @@ IRAM_ATTR void Ports::pitGenSound(uint8_t *buf, int bufsize) {
 #endif
 
 IRAM_ATTR void Ports::ioContentionLate(bool contend) {
+  if (Z80Ops::isInves) {
+    VIDEO::Draw(3, false);
+    return;
+  }
   if (contend) {
     VIDEO::Draw(1, true);
     VIDEO::Draw(1, true);
@@ -1002,8 +1015,7 @@ IRAM_ATTR void Ports::dmaOutput(uint16_t address, uint8_t data) {
                 VIDEO::brd = VIDEO::border32[VIDEO::borderColor];
         }
         int Audiobit;
-        Audiobit = speaker_values[((data >> 2) & 0x04) | (Tape::tapeEarBit << 1) |
-                                    ((data >> 3) & 0x01)];
+        Audiobit = speaker_values[beeperIndexFromFeData(data)];
         if (Audiobit != ESPectrum::lastaudioBit) {
             ESPectrum::BeeperGetSample();
             ESPectrum::lastaudioBit = Audiobit;

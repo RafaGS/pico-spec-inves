@@ -73,6 +73,7 @@ bool CPU::paused = false;
 bool Z80Ops::is48;
 bool Z80Ops::isByte = false;
 bool Z80Ops::isALF = false;
+bool Z80Ops::isInves = false;
 bool Z80Ops::is128;
 bool Z80Ops::isPentagon;
 bool Z80Ops::is512 = false;
@@ -94,6 +95,10 @@ void CPU::updateStatesInFrame() {
         if (Config::romSet48 == "48Kby") {
             IntEnd = INT_END_BYTE48 - earlyShift;
         }
+    } else if (Config::arch == "INVES") {
+        statesInFrame = TSTATES_PER_FRAME_INVES;
+        IntStart = INT_START_INVES;
+        IntEnd = INT_END_INVES;
     } else if (Config::arch == "128K" || Z80Ops::isALF) {
         statesInFrame = TSTATES_PER_FRAME_128;
         IntStart = INT_START128 - earlyShift;
@@ -133,16 +138,28 @@ void CPU::reset() {
         Z80Ops::isByte = (Config::romSet48 == "48Kby");
         Ports::getFloatBusData = &Ports::getFloatBusData48;
         Z80Ops::is48 = true;
+        Z80Ops::isInves = false;
         Z80Ops::is128 = false;
         Z80Ops::isPentagon = false;
         Z80Ops::is512 = false;
         Z80Ops::is1024 = false;
         // Set emulation loop sync target
         ESPectrum::target = MICROS_PER_FRAME_48;
+    } else if (Config::arch == "INVES") {
+        Z80Ops::isByte = false;
+        Ports::getFloatBusData = &Ports::getFloatBusData128;
+        Z80Ops::is48 = false;
+        Z80Ops::isInves = true;
+        Z80Ops::is128 = false;
+        Z80Ops::isPentagon = false;
+        Z80Ops::is512 = false;
+        Z80Ops::is1024 = false;
+        ESPectrum::target = MICROS_PER_FRAME_INVES;
     } else if (Config::arch == "128K" || Z80Ops::isALF) {
         Z80Ops::isByte = (Config::romSet128 == "128Kby" || Config::romSet128 == "128Kbg");
         Ports::getFloatBusData = &Ports::getFloatBusData128;
         Z80Ops::is48 = false;
+        Z80Ops::isInves = false;
         Z80Ops::is128 = true;
         Z80Ops::isPentagon = false;
         Z80Ops::is512 = false;
@@ -152,6 +169,7 @@ void CPU::reset() {
     } else if (Config::arch == "P512") {
         Z80Ops::isByte = false;
         Z80Ops::is48 = false;
+        Z80Ops::isInves = false;
         Z80Ops::is128 = false;
         Z80Ops::isPentagon = true;
         Z80Ops::is512 = true;
@@ -161,6 +179,7 @@ void CPU::reset() {
     } else if (Config::arch == "P1024") {
         Z80Ops::isByte = false;
         Z80Ops::is48 = false;
+        Z80Ops::isInves = false;
         Z80Ops::is128 = false;
         Z80Ops::isPentagon = true;
         Z80Ops::is512 = false;
@@ -170,6 +189,7 @@ void CPU::reset() {
     } else { // if (Config::arch == "Pentagon") - by default
         Z80Ops::isByte = false;
         Z80Ops::is48 = false;
+        Z80Ops::isInves = false;
         Z80Ops::is128 = false;
         Z80Ops::isPentagon = true;
         Z80Ops::is512 = false;

@@ -39,6 +39,7 @@ visit https://zxespectrum.speccy.org/contacto
 #include "roms/romSinclair48K.h"
 #include "roms/rom48Kspanish.h"
 #include "roms/rom48Kcustom.h"
+#include "roms/romInves.h"
 #include "roms/romSinclair128K.h"
 #include "roms/rom128Kspanish.h"
 #include "roms/romPlus2.h"

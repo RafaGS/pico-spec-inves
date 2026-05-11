@@ -69,46 +69,46 @@ else
 fi
 
 # All available targets
-ALL_TARGETS="MURM_P1 MURM_P2 MURM2_P2 PICO_PC PICO_DV ZERO ZERO2"
+#ALL_TARGETS="MURM_P1 MURM_P2 MURM2_P2 PICO_PC PICO_DV ZERO ZERO2"
 
 # Targets that support TFT+ILI9341 display variant
-TFT_TARGETS="MURM_P1 MURM_P2 MURM2_P2"
+#TFT_TARGETS="MURM_P1 MURM_P2 MURM2_P2"
 
 # Targets that support TFT+ST7789 display variant
-TFT_ST_TARGETS="MURM2_P1"
+#TFT_ST_TARGETS="MURM2_P1"
 
 # Targets that support SOFTTV display variant
-SOFTTV_TARGETS="MURM_P1 MURM_P2 MURM2_P2"
+#SOFTTV_TARGETS="MURM_P1 MURM_P2 MURM2_P2"
 
-# Parse arguments: pass target names to build specific ones, or nothing for all
+# Parse arguments: pass target names to build specific ones, or nothing for ZERO2 only
 if [ $# -gt 0 ]; then
     TARGETS="$*"
 else
-    TARGETS="$ALL_TARGETS"
+    TARGETS="ZERO2"
 fi
 
 # Build list of (target, display) pairs
 BUILD_PAIRS=()
 for TARGET in $TARGETS; do
     BUILD_PAIRS+=("${TARGET}:VGA_HDMI")
-    for TFT_T in $TFT_TARGETS; do
-        if [ "$TARGET" = "$TFT_T" ]; then
-            BUILD_PAIRS+=("${TARGET}:TFT_ILI9341")
-            break
-        fi
-    done
-    for TFT_ST_T in $TFT_ST_TARGETS; do
-        if [ "$TARGET" = "$TFT_ST_T" ]; then
-            BUILD_PAIRS+=("${TARGET}:TFT_ST7789")
-            break
-        fi
-    done
-    for STV_T in $SOFTTV_TARGETS; do
-        if [ "$TARGET" = "$STV_T" ]; then
-            BUILD_PAIRS+=("${TARGET}:SOFTTV")
-            break
-        fi
-    done
+    # for TFT_T in $TFT_TARGETS; do
+    #     if [ "$TARGET" = "$TFT_T" ]; then
+    #         BUILD_PAIRS+=("${TARGET}:TFT_ILI9341")
+    #         break
+    #     fi
+    # done
+    # for TFT_ST_T in $TFT_ST_TARGETS; do
+    #     if [ "$TARGET" = "$TFT_ST_T" ]; then
+    #         BUILD_PAIRS+=("${TARGET}:TFT_ST7789")
+    #         break
+    #     fi
+    # done
+    # for STV_T in $SOFTTV_TARGETS; do
+    #     if [ "$TARGET" = "$STV_T" ]; then
+    #         BUILD_PAIRS+=("${TARGET}:SOFTTV")
+    #         break
+    #     fi
+    # done
 done
 
 echo "=== pico-spec multi-target build ==="

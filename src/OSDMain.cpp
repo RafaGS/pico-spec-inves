@@ -3224,15 +3224,22 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                             menu_saverect = true;
                             opt2 = menuRun(MENU_ROMS48[Config::lang]);
                             if (opt2) {
+#if NO_SPAIN_ROM_48k
                                 arch = "48K";
                                 if (opt2 == 1) {
                                     romset = "48K";
                                 } else
-#if NO_SPAIN_ROM_48k
                                 if (opt2 == 2) {
+                                    romset = "48Kby";
+                                } else
+                                if (opt2 == 3) {
                                     romset = "48Kcs";
                                 }
 #else
+                                arch = "48K";
+                                if (opt2 == 1) {
+                                    romset = "48K";
+                                } else
                                 if (opt2 == 2) {
                                     romset = "48Kes";
                                 } else
@@ -3246,7 +3253,19 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                 menu_curopt = 1;
                                 menu_level = 2;
                             }
-                        } else if (arch_num == 2) { // 128K
+                        } else if (arch_num == 2) { // Inves +
+                            arch = "INVES";
+                            romset = "INVES";
+                            menu_curopt = 1;
+                            menu_saverect = false;
+                            Config::romSet = romset;
+                            click();
+                            if (VIDEO::OSD) OSD::drawStats();
+                            Config::save();
+                            Config::requestMachine(arch, romset);
+                            ESPectrum::reset();
+                            return;
+                        } else if (arch_num == 3) { // 128K
                             menu_level = 2;
                             menu_curopt = 1;
                             menu_saverect = true;
@@ -3283,7 +3302,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                 menu_curopt = 1;
                                 menu_level = 2;
                             }
-                        } else if (arch_num == 3) { // Pentagon
+                        } else if (arch_num == 4) { // Pentagon
                             menu_level = 2;
                             menu_curopt = 1;
                             menu_saverect = true;
@@ -3305,7 +3324,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                 menu_curopt = 1;
                                 menu_level = 2;
                             }
-                        } else if (ext_ram && arch_num == 4) { // Pentagon 512K
+                        } else if (ext_ram && arch_num == 5) { // Pentagon 512K
                             menu_level = 2;
                             menu_curopt = 1;
                             menu_saverect = true;
@@ -3327,7 +3346,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                 menu_curopt = 1;
                                 menu_level = 2;
                             }
-                        } else if (ext_ram && arch_num == 5) { // Pentagon 1024K
+                        } else if (ext_ram && arch_num == 6) { // Pentagon 1024K
                             menu_level = 2;
                             menu_curopt = 1;
                             menu_saverect = true;
@@ -3349,7 +3368,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                 menu_curopt = 1;
                                 menu_level = 2;
                             }
-                        } else if (ext_ram && arch_num == 6) { // BYTE
+                        } else if (ext_ram && arch_num == 7) { // BYTE
                             menu_level = 2;
                             menu_curopt = 1;
                             menu_saverect = true;
@@ -3413,7 +3432,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                     break;
                                 }
                             }
-                        } else if (ext_ram && arch_num == 7) { // Murmuzavr
+                        } else if (ext_ram && arch_num == 8) { // Murmuzavr
                             menu_level = 2;
                             menu_curopt = 1;
                             menu_saverect = true;
@@ -3494,7 +3513,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                             }
                         }
 #if !NO_ALF
-                        else if (arch_num == 8 || !ext_ram) { // ALF TV GAME
+                        else if (arch_num == 9 || !ext_ram) { // ALF TV GAME
                             arch = "ALF";
                             romset = "ALF1";
                             menu_curopt = opt2;
@@ -4532,12 +4551,6 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                         menu_saverect = false;
                     }
                     else if (hw_opt == 4) {
-                        // HID devices
-                        OSD::HIDDevices();
-                        menu_curopt = 4;
-                        menu_saverect = false;
-                    }
-                    else if (hw_opt == 5) {
                         // Overclock submenu — warn user
                         osdCenteredMsg(Config::lang ? "Peligroso! Puede no arrancar!" : "Dangerous! Board may not boot!", LEVEL_WARN, 2000);
                         menu_level = 2;
@@ -8020,27 +8033,6 @@ void OSD::EmulatorInfo() {
     }
 
     showTextDialog(Config::lang ? "Info emulador" : "Emulator Info", buf);
-}
-
-extern "C" int hid_app_format_devices_info(char* buf, int bufsz);
-extern "C" int xinput_app_format_devices_info(char* buf, int bufsz);
-
-void OSD::HIDDevices() {
-    char (&buf)[OSD_INFO_BUF_SZ] = osd_info_buf;
-    buf[0] = '\0';
-    int xpos = xinput_app_format_devices_info(buf, sizeof(buf));
-    if (xpos < 0) xpos = 0;
-    if (xpos >= (int)sizeof(buf)) xpos = sizeof(buf) - 1;
-    buf[xpos] = '\0';
-    int hpos = hid_app_format_devices_info(buf + xpos, sizeof(buf) - xpos);
-    if (hpos < 0) hpos = 0;
-    if (xpos + hpos >= (int)sizeof(buf)) hpos = sizeof(buf) - xpos - 1;
-    buf[xpos + hpos] = '\0';
-    if (xpos == 0 && hpos == 0) {
-        snprintf(buf, sizeof(buf),
-            "No HID/XInput devices.\n\nPlug in a USB device\nand reopen this dialog.\n");
-    }
-    showTextDialog(Config::lang ? "Disp. HID" : "HID devices", buf);
 }
 
 static void __not_in_flash_func(flash_block)(const uint8_t* buffer, size_t flash_target_offset) {

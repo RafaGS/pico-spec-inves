@@ -910,14 +910,12 @@ static const char *MENU_OTHER[2] = { MENU_OTHER_EN, MENU_OTHER_ES };
     "Chip Info\n"\
     "Board Info\n"\
     "Emulator Info\n"\
-    "HID devices\n"\
     "Overclock (!)\t>\n"
 #define MENU_HARDWARE_ES \
     "Hardware\n"\
     "Chip Info\n"\
     "Info placa\n"\
     "Info emulador\n"\
-    "Disp. HID\n"\
     "Overclock (!)\t>\n"
 static const char *MENU_HARDWARE[2] = { MENU_HARDWARE_EN, MENU_HARDWARE_ES };
 
@@ -1122,6 +1120,7 @@ static const char *MENU_ISSUE2[2] = { "48K Issue 2\n", "48K Issue 2\n"};
 #if NO_ALF
 #define MENU_ARCHS \
     "Spectrum 48K\t>\n"\
+    "Inves +\n"\
     "Spectrum 128K\t>\n"\
 	"Pentagon 128K\t>\n"\
 	"Pentagon 512K\t>\n"\
@@ -1131,6 +1130,7 @@ static const char *MENU_ISSUE2[2] = { "48K Issue 2\n", "48K Issue 2\n"};
 #else
 #define MENU_ARCHS \
     "Spectrum 48K\t>\n"\
+    "Inves +\n"\
     "Spectrum 128K\t>\n"\
 	"Pentagon 128K\t>\n"\
 	"Pentagon 512K\t>\n"\

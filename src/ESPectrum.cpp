@@ -602,6 +602,16 @@ void ESPectrum::setup() {
       if (Config::pref_arch != "Last")
         Config::arch = Config::pref_arch;
 
+      // Migrate old "Last used" defaults from legacy 48K configs to INVES.
+      if (Config::pref_arch == "Last" && Config::arch == "48K") {
+        Config::arch = "INVES";
+        if (Config::romSet == "48K" || Config::romSet == "48Kes" ||
+            Config::romSet == "48Kby" || Config::romSet == "48Kcs") {
+          Config::romSet = "INVES";
+        }
+        Config::save();
+      }
+
       if (Config::arch == "48K") {
         if (Config::pref_romSet_48 != "Last")
           Config::romSet = Config::pref_romSet_48;
@@ -690,17 +700,17 @@ void ESPectrum::setup() {
     MemESP::ram[3].assign_ram(new unsigned char[MEM_PG_SZ], 3, false);
     ram_pages += 3;
 #else
-    // RP2350: pages 0-3 are pre-bound to static `pages0123` SRAM buffer
-    // (MemESP.cpp). Skip assign_ram so we don't overwrite the static buffer.
+    MemESP::ram[0].assign_ram(new unsigned char[MEM_PG_SZ], 0, false);
+    MemESP::ram[1].assign_ram(new unsigned char[MEM_PG_SZ], 1, false);
+    MemESP::ram[2].assign_ram(new unsigned char[MEM_PG_SZ], 2, false);
+    MemESP::ram[3].assign_ram(new unsigned char[MEM_PG_SZ], 3, false);
     ram_pages += 4;
 #endif
-    // pages 4, 5, 6, 7 are now all in static SRAM buffers (pages46/pages57)
-    // for guaranteed POINTER backing — see MemESP.cpp temp[] init.
-    // Pages 4,6 historically counted in ram_pages via assign_ram; keep that
-    // behaviour so MEM_PG_CNT-aware page-bound checks treat them as RAM.
-    // Pages 5,7 historically not counted — leave them untracked.
-    ram_pages += 2;
-    Debug::log("setup: ext_ram: pages 4-7 in static SRAM, freeHeap=%u", getFreeHeap());
+    // pages 4 and 6 — use assign_ram for MEM_REMAIN check
+    // 5 and 7 - static (video RAM)
+    assign_ram(4);
+    assign_ram(6);
+    Debug::log("setup: ext_ram: pages 0-6 done, freeHeap=%u", getFreeHeap());
     for (size_t i = 8; i < (MEM_PG_CNT + 2); ++i) {
       assign_ram(i);
     }
@@ -710,18 +720,29 @@ void ESPectrum::setup() {
   } else {
     Debug::log("setup: no ext_ram path, freeHeap=%u", getFreeHeap());
 #if PICO_RP2350
-    // RP2350: pages 0-3 are pre-bound to static `pages0123` (MemESP.cpp).
-    ram_pages += 4;
+    // TODO: real number of supported pages: +256/16=16? or just +8 and support
+    // Pentagon 256? or 512-128...
+    MemESP::ram[0].assign_ram(new unsigned char[MEM_PG_SZ], 0, false);
+    ++ram_pages;
 #else
-    // RP2040: page 0 not supported without virtual memory; pages 1-3 essential.
+// page 0 is not supported without virtual memory on RP2040
+#endif
+    // Pages 1-3 are essential (minimum for 48K)
     MemESP::ram[1].assign_ram(new unsigned char[MEM_PG_SZ], 1, false);
     MemESP::ram[2].assign_ram(new unsigned char[MEM_PG_SZ], 2, false);
     MemESP::ram[3].assign_ram(new unsigned char[MEM_PG_SZ], 3, false);
     ram_pages += 3;
-#endif
-    // Pages 4 and 6 — pre-bound to static `pages46` (MemESP.cpp).
-    // Pages 5,7 historically not counted — leave them untracked.
-    ram_pages += 2;
+    // Pages 4,6 only if enough heap remains for framebuffer
+    if (getFreeHeap() >= MEM_PG_SZ + MEM_REMAIN) {
+        MemESP::ram[4].assign_ram(new unsigned char[MEM_PG_SZ], 4, false);
+        ++ram_pages;
+    }
+    // 5 - static (video RAM)
+    if (getFreeHeap() >= MEM_PG_SZ + MEM_REMAIN) {
+        MemESP::ram[6].assign_ram(new unsigned char[MEM_PG_SZ], 6, false);
+        ++ram_pages;
+    }
+    // 7 - static (video RAM)
     Debug::log("setup: no ext_ram: pages done, freeHeap=%u", getFreeHeap());
   }
   // Load romset
@@ -755,16 +776,30 @@ void ESPectrum::setup() {
   }
 
   MemESP::ramContended[0] = false;
-  MemESP::ramContended[1] = Config::arch == "P1024" || Config::arch == "P512" ||
-                                    Config::arch == "Pentagon"
-                                ? false
-                                : true;
+  MemESP::ramContended[1] = (Config::arch == "P1024" || Config::arch == "P512" ||
+                            Config::arch == "Pentagon" || Config::arch == "INVES")
+                           ? false
+                           : true;
   MemESP::ramContended[2] = false;
   MemESP::ramContended[3] = false;
 
   // if (Config::arch == "48K") MemESP::pagingLock = 1; else MemESP::pagingLock
   // = 0;
-  MemESP::pagingLock = Config::arch == "48K" ? 1 : 0;
+  MemESP::pagingLock = (Config::arch == "48K" || Config::arch == "INVES") ? 1 : 0;
+
+  // INVES: FE writes are AND-masked with RAM at full 16-bit port address.
+  // Initialize physical 64K RAM to 0xFF to keep initial FE masking from
+  // forcing border/beeper low due to random data on RAM[port].
+  if (Config::arch == "INVES") {
+    uint8_t* ram0 = MemESP::ram[0].direct();
+    uint8_t* ram1 = MemESP::ram[1].direct();
+    uint8_t* ram2 = MemESP::ram[2].direct();
+    uint8_t* ram3 = MemESP::ram[3].direct();
+    if (ram0) memset(ram0, 0xFF, 16384);
+    if (ram1) memset(ram1, 0xFF, 16384);
+    if (ram2) memset(ram2, 0xFF, 16384);
+    if (ram3) memset(ram3, 0xFF, 16384);
+  }
 
   ///    if (Config::slog_on) showMemInfo("RAM Initialized");
 
@@ -838,6 +873,13 @@ void ESPectrum::setup() {
 
     Audio_freq = ESP_AUDIO_FREQ_48;
     tstatesPerSampleFP = (TSTATES_PER_FRAME_48 << 8) / ESP_AUDIO_SAMPLES_48;
+  } else if (Config::arch == "INVES") {
+    samplesPerFrame = ESP_AUDIO_SAMPLES_128;
+    audioOverSampleDivider = ESP_AUDIO_OVERSAMPLES_DIV_128;
+    audioAYDivider = ESP_AUDIO_AY_DIV_128;
+    audioSampleDivider = ESP_AUDIO_SAMPLES_DIV_128;
+    Audio_freq = ESP_AUDIO_FREQ_128;
+    tstatesPerSampleFP = (TSTATES_PER_FRAME_INVES << 8) / ESP_AUDIO_SAMPLES_128;
   } else if (Config::arch == "128K" || Config::arch == "ALF") {
     samplesPerFrame = ESP_AUDIO_SAMPLES_128;
     audioOverSampleDivider = ESP_AUDIO_OVERSAMPLES_DIV_128;
@@ -1007,14 +1049,27 @@ void ESPectrum::reset(uint8_t romInUse) {
   }
 
   MemESP::ramContended[0] = false;
-  MemESP::ramContended[1] = Config::arch == "P1024" || Config::arch == "P512" ||
-                                    Config::arch == "Pentagon"
-                                ? false
-                                : true;
+    MemESP::ramContended[1] = (Config::arch == "P1024" || Config::arch == "P512" ||
+                              Config::arch == "Pentagon" || Config::arch == "INVES")
+                             ? false
+                             : true;
   MemESP::ramContended[2] = false;
   MemESP::ramContended[3] = false;
 
-  MemESP::pagingLock = Config::arch == "48K" ? 1 : 0;
+  MemESP::pagingLock = (Config::arch == "48K" || Config::arch == "INVES") ? 1 : 0;
+
+  // INVES: FE writes are AND-masked with RAM at full 16-bit port address.
+  // Initialize physical 64K RAM to 0xFF to avoid random FE masking effects.
+  if (Config::arch == "INVES") {
+    uint8_t* ram0 = MemESP::ram[0].direct();
+    uint8_t* ram1 = MemESP::ram[1].direct();
+    uint8_t* ram2 = MemESP::ram[2].direct();
+    uint8_t* ram3 = MemESP::ram[3].direct();
+    if (ram0) memset(ram0, 0xFF, 16384);
+    if (ram1) memset(ram1, 0xFF, 16384);
+    if (ram2) memset(ram2, 0xFF, 16384);
+    if (ram3) memset(ram3, 0xFF, 16384);
+  }
 
   // Init disk controller
   rvmWD1793Reset(&fdd);
@@ -1066,6 +1121,13 @@ void ESPectrum::reset(uint8_t romInUse) {
     audioSampleDivider = ESP_AUDIO_SAMPLES_DIV_48;
     Audio_freq = ESP_AUDIO_FREQ_48;
     tstatesPerSampleFP = (TSTATES_PER_FRAME_48 << 8) / ESP_AUDIO_SAMPLES_48;
+  } else if (Config::arch == "INVES") {
+    samplesPerFrame = ESP_AUDIO_SAMPLES_128;
+    audioOverSampleDivider = ESP_AUDIO_OVERSAMPLES_DIV_128;
+    audioAYDivider = ESP_AUDIO_AY_DIV_128;
+    audioSampleDivider = ESP_AUDIO_SAMPLES_DIV_128;
+    Audio_freq = ESP_AUDIO_FREQ_128;
+    tstatesPerSampleFP = (TSTATES_PER_FRAME_INVES << 8) / ESP_AUDIO_SAMPLES_128;
   } else if (Config::arch == "128K" || Config::arch == "ALF") {
     samplesPerFrame = ESP_AUDIO_SAMPLES_128;
     audioOverSampleDivider = ESP_AUDIO_OVERSAMPLES_DIV_128;

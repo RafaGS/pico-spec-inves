@@ -974,8 +974,7 @@ IRAM_ATTR void Z80::check_trdos() {
             if (REG_PCh == 0x3D) {
 
                 // TR-DOS Rom can be accessed from 48K machines and from Spectrum 128/+2 and Pentagon if the currently mapped ROM is bank 1.
-                // newSRAM=true means slot 0 is a RAM page (Pentagon Hidden RAM), not the stock 48K ROM — skip TR-DOS automap.
-                if ((Z80Ops::is48 && MemESP::romInUse == 0) || (!Z80Ops::is48 && MemESP::romInUse == 1 && !MemESP::newSRAM)) {
+                if ((Z80Ops::is48 && MemESP::romInUse == 0) || (!Z80Ops::is48 && MemESP::romInUse == 1)) {
                     MemESP::romInUse = 4;
                     MemESP::ramCurrent[0] = MemESP::rom[4].direct();
                     ESPectrum::trdos = true;
@@ -1057,6 +1056,15 @@ void Z80::interrupt(void) {
     VIDEO::Draw(7, false);
 
     regR++;
+
+    // INVES TAHC10 bug: during INT accept refresh cycle, RAM gets a spurious
+    // write at address (I << 8) | R with bus-idle value (typically 0xFF).
+    // Keep it in IM2 where software depends on this behaviour; applying it in
+    // IM1 during ROM startup can destabilize keyboard/bootstrap flows.
+    if (Z80Ops::isInves && modeINT == IntMode::IM2) {
+        uint16_t inta_addr = ((uint16_t)regI << 8) | getRegR();
+        MemESP::ram[inta_addr >> 14].write(inta_addr & 0x3FFF, 0xFF);
+    }
 
     ffIFF1 = ffIFF2 = false;
     push(REG_PC); // el push añadirá 6 t-estados (+contended si toca)

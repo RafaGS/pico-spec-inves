@@ -728,21 +728,6 @@ void VIDEO::ulaPlusDisable() {
 // (#C000/#E000 when bank=4). Pixel order in the 8-pixel byte-column: planes
 // are sourced for pixel pairs in the order described by UnrealSpeccy
 // dxr_4bpp.cpp p4bpp_ofs[] — column-pair i mod 4 selects the plane.
-// Precomputed LUT: IiGRBgrb byte -> uint16_t with two 4-bit palette indices.
-// Low byte = LEFT pixel  = (bit6 << 3) | (bits 2..0)  = (i, grb)
-// High byte = RIGHT pixel = (bit7 << 3) | (bits 5..3) = (I, GRB)
-// 512 bytes in SRAM, hot in cache. Reading one byte from a Pentagon plane
-// becomes a single LDRH from this table — no shift/mask in the inner loop.
-static uint16_t mode16col_decode_lut[256] __attribute__((aligned(4)));
-
-static void init_mode16col_decode_lut() {
-    for (int x = 0; x < 256; x++) {
-        uint8_t L = (uint8_t)((((x) >> 3) & 0x08) | ((x) & 0x07));
-        uint8_t R = (uint8_t)((((x) >> 4) & 0x08) | (((x) >> 3) & 0x07));
-        mode16col_decode_lut[x] = (uint16_t)L | ((uint16_t)R << 8);
-    }
-}
-
 void VIDEO::mode16colUpdatePlanes() {
     uint8_t pLow = MemESP::videoLatch ? 6 : 4;   // #C000/#E000 area (when bank=4)
     uint8_t pHi  = MemESP::videoLatch ? 7 : 5;   // #4000/#6000 area
@@ -843,7 +828,7 @@ const int bluPins[] = {BLU_PINS_6B};
 
 void VIDEO::vgataskinit(void *unused) {
     uint8_t Mode;
-    Mode = 16 + ((Config::arch == "48K") ? 0 : (Config::arch == "128K" || Config::arch == "ALF" ? 2 : 4)) + (Config::aspect_16_9 ? 1 : 0);
+    Mode = 16 + ((Config::arch == "48K") ? 0 : (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF" ? 2 : 4)) + (Config::aspect_16_9 ? 1 : 0);
     OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
     OSD::scrH = vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv];
     vga.useInterrupt_flag = true;
@@ -938,11 +923,6 @@ void VIDEO::Init() {
     // Generate AluBytes table with palette indices (no sync bits)
     initAluBytes();
 
-#if !PICO_RP2040
-    // Precompute 16col byte->2-pixel LUT (used by 16col rasterizer hot loop)
-    init_mode16col_decode_lut();
-#endif
-
     precalcULASWAP();   // precalculate ULA SWAP values
 
     precalcborder32();  // Precalc border 32 bits values
@@ -1017,14 +997,14 @@ void VIDEO::changeMode() {
         switch (Config::vga_video_mode) {
             case Config::VM_640x480_50:
                 if (Config::arch == "48K") video_mode = 2;
-                else if (Config::arch == "128K" || Config::arch == "ALF") video_mode = 3;
+                else if (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF") video_mode = 3;
                 else video_mode = 1;
                 break;
             case Config::VM_720x480_60: video_mode = 7; break;
             case Config::VM_720x576_60: video_mode = 8; break;
             case Config::VM_720x576_50:
                 if (Config::arch == "48K") video_mode = 5;
-                else if (Config::arch == "128K" || Config::arch == "ALF") video_mode = 6;
+                else if (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF") video_mode = 6;
                 else video_mode = 4;
                 break;
             default: video_mode = 0; break;
@@ -1034,14 +1014,14 @@ void VIDEO::changeMode() {
             case Config::VM_640x480_60: video_mode = 0; break;
             case Config::VM_640x480_50:
                 if (Config::arch == "48K") video_mode = 2;
-                else if (Config::arch == "128K") video_mode = 3;
+                else if (Config::arch == "128K" || Config::arch == "INVES") video_mode = 3;
                 else video_mode = 1;
                 break;
             case Config::VM_720x480_60: video_mode = 7; break;
             case Config::VM_720x576_60: video_mode = 8; break;
             case Config::VM_720x576_50:
                 if (Config::arch == "48K") video_mode = 5;
-                else if (Config::arch == "128K" || Config::arch == "ALF") video_mode = 6;
+                else if (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF") video_mode = 6;
                 else video_mode = 4;
                 break;
             default: video_mode = 0; break;
@@ -1109,7 +1089,10 @@ void VIDEO::changeMode() {
 
 void VIDEO::Reset() {
 
-    borderColor = 7;
+    // INVES: ROM writes OUT(0xFE),A=7 at boot (T≈35, before border draw starts).
+    // Setting borderColor=255 ensures that first OUT always triggers brdChange,
+    // which propagates to fill the framebuffer in the next frame via brdnextframe.
+    borderColor = (Config::arch == "INVES") ? 255 : 7;
     brd = border32[7];
 
 #if !PICO_RP2040
@@ -1154,6 +1137,19 @@ void VIDEO::Reset() {
             tStatesBorder = isFullBorder ? (isFullBorder240 ? TS_BORDER_360x240 : TS_BORDER_360x288)
                           : is169 ? TS_BORDER_360x200 : TS_BORDER_320x240;
         }
+        VsyncFinetune[0] = 0;
+        VsyncFinetune[1] = 0;
+
+        Draw_OSD169 = MainScreen;
+        Draw_OSD43 = BottomBorder;
+        DrawBorder = TopBorder_Blank;
+    } else if (Config::arch == "INVES") {
+        tStatesPerLine = TSTATES_PER_LINE_128;
+        tStatesScreen = TS_SCREEN_INVES;
+        // INVES keeps the same line structure but with a shifted screen base.
+        // Use INVES-specific border start constants aligned to TS_SCREEN_INVES.
+        tStatesBorder = isFullBorder ? (isFullBorder240 ? TS_BORDER_360x240_INVES : TS_BORDER_360x288_INVES)
+                      : is169 ? TS_BORDER_360x200_INVES : TS_BORDER_320x240_INVES;
         VsyncFinetune[0] = 0;
         VsyncFinetune[1] = 0;
 
@@ -1266,7 +1262,7 @@ void VIDEO::Reset() {
         switch (Config::vga_video_mode) {
             case Config::VM_640x480_50:
                 if (Config::arch == "48K") video_mode = 2;
-                else if (Config::arch == "128K" || Config::arch == "ALF") video_mode = 3;
+                else if (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF") video_mode = 3;
                 else video_mode = 1; // Pentagon
                 break;
             case Config::VM_720x480_60:
@@ -1277,7 +1273,7 @@ void VIDEO::Reset() {
                 break;
             case Config::VM_720x576_50:
                 if (Config::arch == "48K") video_mode = 5;
-                else if (Config::arch == "128K" || Config::arch == "ALF") video_mode = 6;
+                else if (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF") video_mode = 6;
                 else video_mode = 4; // Pentagon
                 break;
             default: // VM_640x480_60
@@ -1294,7 +1290,7 @@ void VIDEO::Reset() {
                 break;
             case Config::VM_640x480_50:
                 if (Config::arch == "48K") video_mode = 2;
-                else if (Config::arch == "128K") video_mode = 3;
+                else if (Config::arch == "128K" || Config::arch == "INVES") video_mode = 3;
                 else video_mode = 1; // Pentagon
                 break;
             case Config::VM_720x480_60:
@@ -1305,7 +1301,7 @@ void VIDEO::Reset() {
                 break;
             case Config::VM_720x576_50:
                 if (Config::arch == "48K") video_mode = 5;
-                else if (Config::arch == "128K" || Config::arch == "ALF") video_mode = 6;
+                else if (Config::arch == "128K" || Config::arch == "INVES" || Config::arch == "ALF") video_mode = 6;
                 else video_mode = 4; // Pentagon
                 break;
             default:
@@ -1645,26 +1641,37 @@ IRAM_ATTR void VIDEO::MainScreen(unsigned int statestoadd, bool contended) {
         }
     } else if (VIDEO::mode16col_enabled) {
         // 16col (Pentagon, Alone Coder, ZXPress Inferno #08).
-        // Byte layout: %IiGRBgrb. mode16col_decode_lut[] precomputes
-        // (left_pixel | right_pixel<<8) for every input byte.
+        // Byte layout: %IiGRBgrb. Per the article, IGRB = RIGHT pixel,
+        // igrb = LEFT pixel (lowercase letters are the left half of the byte).
+        // Palette index = (intensity << 3) | colour_3bit (standard ZX 16-col).
         // Plane order per pixel-pair: A,B,C,D = #C000, #4000, #E000, #6000.
-        // Frame buffer order is byte-swapped (^2) per AluByte convention so
-        // HDMI scanout ISR reads pixels in correct visual order.
+        //
+        // Frame buffer pixel ordering inside a uint32_t follows AluByte
+        // convention: byte0=p2, byte1=p3, byte2=p0, byte3=p1 — the HDMI
+        // scanout ISR reads via `input_buffer[(x++) ^ 2]` which inverts the
+        // top/bottom halves of every 4-pixel group. We must write in that
+        // swapped order so pixels appear correctly on screen.
         const uint8_t* pA = VIDEO::mode16col_planes[0];
         const uint8_t* pB = VIDEO::mode16col_planes[1];
         const uint8_t* pC = VIDEO::mode16col_planes[2];
         const uint8_t* pD = VIDEO::mode16col_planes[3];
-        const uint16_t* lut = mode16col_decode_lut;
         for (; loopCount--; ) {
             uint16_t off = bmpOffset++;
-            uint32_t la = lut[pA[off]];
-            uint32_t lb = lut[pB[off]];
-            uint32_t lc = lut[pC[off]];
-            uint32_t ld = lut[pD[off]];
+            uint8_t a = pA[off];
+            uint8_t b = pB[off];
+            uint8_t c = pC[off];
+            uint8_t d = pD[off];
+            // Decode IiGRBgrb -> palette indices for left and right pixels.
+            #define M16C_L(x) (uint32_t)((((x) >> 3) & 0x08) | ((x) & 0x07))
+            #define M16C_R(x) (uint32_t)((((x) >> 4) & 0x08) | (((x) >> 3) & 0x07))
             // pixels 0..3 = L(a), R(a), L(b), R(b) — written as bytes [2,3,0,1]
-            *lineptr32++ = lb | (la << 16);
+            *lineptr32++ = M16C_L(b) | (M16C_R(b) << 8)
+                         | (M16C_L(a) << 16) | (M16C_R(a) << 24);
             // pixels 4..7 = L(c), R(c), L(d), R(d) — same swap
-            *lineptr32++ = ld | (lc << 16);
+            *lineptr32++ = M16C_L(d) | (M16C_R(d) << 8)
+                         | (M16C_L(c) << 16) | (M16C_R(c) << 24);
+            #undef M16C_L
+            #undef M16C_R
         }
     } else
 #endif
@@ -2008,6 +2015,29 @@ IRAM_ATTR void VIDEO::Blank_Snow_Opcode(bool contended) { CPU::tstates += 4; }
 
 IRAM_ATTR void VIDEO::EndFrame() {
 
+    auto repaintBorderRegions = []() {
+        uint8_t border = brd & 0xFF;
+        int left = brdcol_end1 * 2;  // brdcol_end1 is in T-states, 1T = 2 pixels
+        if (left < 0) left = 0;
+        if (left > (int)vga.xres) left = vga.xres;
+
+        // Top border
+        for (int y = 0; y < (int)lin_end && y < (int)vga.yres; y++)
+            memset(vga.frameBuffer[y], border, vga.xres);
+
+        // Side borders over paper area
+        for (int y = (int)lin_end; y < (int)lin_end2 && y < (int)vga.yres; y++) {
+            if (left > 0) {
+                memset(vga.frameBuffer[y], border, left);
+                memset(vga.frameBuffer[y] + (vga.xres - left), border, left);
+            }
+        }
+
+        // Bottom border
+        for (int y = (int)lin_end2; y < (int)vga.yres; y++)
+            memset(vga.frameBuffer[y], border, vga.xres);
+    };
+
     linedraw_cnt = lin_end;
 
     tstateDraw = tStatesScreen;
@@ -2057,9 +2087,17 @@ IRAM_ATTR void VIDEO::EndFrame() {
             brdGigascreenChange = false;
         } else {
             if (brdnextframe) {
-                DrawBorder();
+                // Border changed last frame but no OUT(0xFE) this frame.
+                // Repaint only border regions to avoid touching paper.
+                repaintBorderRegions();
                 brdnextframe = false;
             }
+        }
+
+        // INVES fallback: keep border regions coherent even if the cycle-accurate
+        // border state machine misses early/late OUT(0xFE) windows.
+        if (Config::arch == "INVES") {
+            repaintBorderRegions();
         }
     } else {
         brdGigascreenChange = false;
