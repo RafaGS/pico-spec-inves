@@ -8,6 +8,10 @@ So, reusing as much of the existing code for the ZX Spectrum 128K and Pentagon a
 
 In this fork, Inves starts up by default. It has only been tested on the Waveshare RP2350-PiZero.
 
-For more information, visit Minibots.
+Build using:
+
+$ ./build_all.sh ZERO2 
+
+For more information, visit Minibots <https://minibots.wordpress.com>.
 
 Based on https://github.com/drewpo28/pico-spec
