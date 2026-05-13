@@ -12,6 +12,6 @@ Build using:
 
 $ ./build_all.sh ZERO2 
 
-For more information, visit Minibots <https://minibots.wordpress.com>.
+For more information, visit the [full description of this emulator](https://minibots.wordpress.com/2026/05/11/emulador-de-inves-spectrum-con-waveshare-rp2350-pizero/) and Minibots <https://minibots.wordpress.com>.
 
 Based on https://github.com/drewpo28/pico-spec

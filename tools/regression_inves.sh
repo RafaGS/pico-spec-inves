@@ -98,6 +98,9 @@ require_pattern "src/Ports.cpp" "return port\[0x1F\] & 0x1F;" "Lectura INVES de 
 require_pattern "src/Config.cpp" "if \(Config::arch == \"INVES\"\)[[:space:]]*\{" "Existe saneamiento de config para INVES"
 require_pattern "src/Config.cpp" "Config::kempstonPort = 0x1F;" "Config fuerza kempstonPort=0x1F en INVES"
 
+echo "[4c/5] Validando flashload INVES"
+require_pattern "src/Tape.cpp" "if \(Z80Ops::is48 \|\| Z80Ops::isInves\)" "INVES usa loader48 en flashload"
+
 echo "[5/5] Build opcional"
 if [[ "$RUN_BUILD" -eq 1 ]]; then
     if ./build_all.sh "$TARGET" >/tmp/regression_inves_build.log 2>&1; then

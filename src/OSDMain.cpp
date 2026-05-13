@@ -3204,401 +3204,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                     }
                 }
             }
-            else if (opt == 5) { // Machine
-                // ***********************************************************************************
-                // MACHINE MENU
-                // ***********************************************************************************
-                menu_saverect = true;
-                menu_curopt = 1;
-                bool ext_ram = butter_psram_size() || FileUtils::fsMount || psram_size() > 0;
-                while (1) {
-                    menu_level = 1;
-                    uint8_t arch_num = menuRun(ext_ram ? MENU_ARCH[Config::lang] : MENU_ARCH_NO_SD[Config::lang]);
-                    if (arch_num) {
-                        string arch = Config::arch;
-                        string romset = Config::romSet;
-                        uint8_t opt2 = 0;
-                        if (arch_num == 1) { // 48K
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            opt2 = menuRun(MENU_ROMS48[Config::lang]);
-                            if (opt2) {
-#if NO_SPAIN_ROM_48k
-                                arch = "48K";
-                                if (opt2 == 1) {
-                                    romset = "48K";
-                                } else
-                                if (opt2 == 2) {
-                                    romset = "48Kby";
-                                } else
-                                if (opt2 == 3) {
-                                    romset = "48Kcs";
-                                }
-#else
-                                arch = "48K";
-                                if (opt2 == 1) {
-                                    romset = "48K";
-                                } else
-                                if (opt2 == 2) {
-                                    romset = "48Kes";
-                                } else
-                                if (opt2 == 3) {
-                                    romset = "48Kcs";
-                                }
-#endif
-                                menu_curopt = opt2;
-                                menu_saverect = false;
-                            } else {
-                                menu_curopt = 1;
-                                menu_level = 2;
-                            }
-                        } else if (arch_num == 2) { // Inves +
-                            arch = "INVES";
-                            romset = "INVES";
-                            menu_curopt = 1;
-                            menu_saverect = false;
-                            Config::romSet = romset;
-                            click();
-                            if (VIDEO::OSD) OSD::drawStats();
-                            Config::save();
-                            Config::requestMachine(arch, romset);
-                            ESPectrum::reset();
-                            return;
-                        } else if (arch_num == 3) { // 128K
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            opt2 = menuRun(MENU_ROMS128[Config::lang]);
-                            if (opt2) {
-                                arch = "128K";
-                                if (opt2 == 1) {
-                                    romset = "128K";
-                                } else
-#if NO_SPAIN_ROM_128k
-                                if (opt2 == 2) {
-                                    romset = "128Kcs";
-                                }
-#else
-                                if (opt2 == 2) {
-                                    romset = "128Kes";
-                                } else
-                                if (opt2 == 3) {
-                                    romset = "+2";
-                                } else
-                                if (opt2 == 4) {
-                                    romset = "+2es";
-                                } else
-                                if (opt2 == 5) {
-                                    romset = "ZX81+";
-                                } else
-                                if (opt2 == 6) {
-                                    romset = "128Kcs";
-                                }
-#endif
-                                menu_curopt = opt2;
-                                menu_saverect = false;
-                            } else {
-                                menu_curopt = 1;
-                                menu_level = 2;
-                            }
-                        } else if (arch_num == 4) { // Pentagon
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            opt2 = menuRun(MENU_ROMS_PENT[Config::lang]);
-                            if (opt2) {
-                                arch = "Pentagon";
-                                if (opt2 == 1) {
-                                    romset = "128Kp";
-                                } else
-                                if (opt2 == 2) {
-                                    romset = "128Kpg";
-                                } else
-                                if (opt2 == 3) {
-                                    romset = "128Kcs";
-                                }
-                                menu_curopt = opt2;
-                                menu_saverect = false;
-                            } else {
-                                menu_curopt = 1;
-                                menu_level = 2;
-                            }
-                        } else if (ext_ram && arch_num == 5) { // Pentagon 512K
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            opt2 = menuRun(MENU_ROMS_PENT[Config::lang]);
-                            if (opt2) {
-                                arch = "P512";
-                                if (opt2 == 1) {
-                                    romset = "128Kp";
-                                } else
-                                if (opt2 == 2) {
-                                    romset = "128Kpg";
-                                } else
-                                if (opt2 == 3) {
-                                    romset = "128Kcs";
-                                }
-                                menu_curopt = opt2;
-                                menu_saverect = false;
-                            } else {
-                                menu_curopt = 1;
-                                menu_level = 2;
-                            }
-                        } else if (ext_ram && arch_num == 6) { // Pentagon 1024K
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            opt2 = menuRun(MENU_ROMS_PENT[Config::lang]);
-                            if (opt2) {
-                                arch = "P1024";
-                                if (opt2 == 1) {
-                                    romset = "128Kp";
-                                } else
-                                if (opt2 == 2) {
-                                    romset = "128Kpg";
-                                } else
-                                if (opt2 == 3) {
-                                    romset = "128Kcs";
-                                }
-                                menu_curopt = opt2;
-                                menu_saverect = false;
-                            } else {
-                                menu_curopt = 1;
-                                menu_level = 2;
-                            }
-                        } else if (ext_ram && arch_num == 7) { // BYTE
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            while (1) {
-                                opt2 = menuRun(MENU_ROMSBYTE[Config::lang]);
-                                if (opt2) {
-                                    if (opt2 == 1) {
-                                        arch = "48K";
-                                        romset = "48Kby";
-                                        break;
-                                    } else
-                                    if (opt2 == 2) {
-                                        arch = "128K";
-                                        romset = "128Kby";
-                                        break;
-                                    } else
-                                    if (opt2 == 3) {
-                                        arch = "128K";
-                                        romset = "128Kbg";
-                                        break;
-                                    } else
-                                    if (opt2 == 4) {
-                                        menu_level = 3;
-                                        menu_curopt = 1;
-                                        menu_saverect = true;
-                                        while (1) {
-                                            string opt_menu = MENU_BYTE_COBMECT_MODE[Config::lang];
-                                            opt_menu += MENU_YESNO[Config::lang];
-                                            bool prev_opt = Config::byte_cobmect_mode;
-                                            if (prev_opt) {
-                                                opt_menu.replace(opt_menu.find("[Y",0),2,"[*");
-                                                opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                            } else {
-                                                opt_menu.replace(opt_menu.find("[Y",0),2,"[ ");
-                                                opt_menu.replace(opt_menu.find("[N",0),2,"[*");
-                                            }
-                                            uint8_t opt2 = menuRun(opt_menu);
-                                            if (opt2) {
-                                                if (opt2 == 1)
-                                                    Config::byte_cobmect_mode = true;
-                                                else
-                                                    Config::byte_cobmect_mode = false;
-
-                                                if (Config::byte_cobmect_mode != prev_opt) {
-                                                    Config::save();
-                                                    MemESP::rom[0].assign_rom(Config::byte_cobmect_mode ? gb_rom_0_byte_sovmest_48k : gb_rom_0_byte_48k);
-                                                    MemESP::recoverPage0();
-                                                }
-                                                menu_curopt = opt2;
-                                                menu_saverect = false;
-                                            } else {
-                                                menu_curopt = 4;
-                                                menu_level = 2;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    menu_curopt = 1;
-                                    menu_level = 2;
-                                    break;
-                                }
-                            }
-                        } else if (ext_ram && arch_num == 8) { // Murmuzavr
-                            menu_level = 2;
-                            menu_curopt = 1;
-                            menu_saverect = true;
-                            while (1) {
-                                string opt_menu = (FileUtils::fsMount ? MENU_MURMUZAVR : MENU_MURMUZAVR_NONE)[Config::lang];
-                                uint32_t new_opt = MEM_PG_CNT, prev_opt = MEM_PG_CNT;
-                                if (!FileUtils::fsMount) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[*");
-#if PICO_RP2350
-                                } else if (prev_opt <= 64) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[*");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[1",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[3",0),2,"[ ");
-                                } else if (prev_opt <= 256) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[*");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[1",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[3",0),2,"[ ");
-                                } else if (prev_opt <= 512) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[*");
-                                    opt_menu.replace(opt_menu.find("[1",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[3",0),2,"[ ");
-                                } else if (prev_opt <= 1024) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[1",0),2,"[*");
-                                    opt_menu.replace(opt_menu.find("[3",0),2,"[ ");
-                                } else {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[1",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[3",0),2,"[*");
-                                }
-#else
-                                } else if (prev_opt <= 64) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[*");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[ ");
-                                } else if (prev_opt <= 256) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[*");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[ ");
-                                } else if (prev_opt <= 512) {
-                                    opt_menu.replace(opt_menu.find("[N",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[4",0),2,"[ ");
-                                    opt_menu.replace(opt_menu.find("[8",0),2,"[*");
-                                }
-#endif
-                                uint8_t opt2 = menuRun(opt_menu);
-                                if (opt2) {
-                                    if (opt2 == 1) new_opt = 64;
-                                    else if (opt2 == 2) new_opt = 256;
-                                    else if (opt2 == 3) new_opt = 512;
-                                    else if (opt2 == 4) new_opt = 1024;
-                                    else if (opt2 == 5) new_opt = 2048;
-                                    if (prev_opt != new_opt) {
-                                        if (confirmReboot(OSD_DLG_APPLYREBOOT)) {
-                                            MEM_PG_CNT = new_opt;
-                                            Config::save();
-                                            OSD::esp_hard_reset();
-                                            return;
-                                        }
-                                    }
-                                    menu_curopt = opt2;
-                                    menu_saverect = false;
-                                } else {
-                                    menu_curopt = 1;
-                                    menu_level = 2;
-                                    break;
-                                }
-                            }
-                        }
-#if !NO_ALF
-                        else if (arch_num == 9 || !ext_ram) { // ALF TV GAME
-                            arch = "ALF";
-                            romset = "ALF1";
-                            menu_curopt = opt2;
-                            menu_saverect = false;
-                            Config::romSet = romset;
-                            click();
-                            if (VIDEO::OSD) OSD::drawStats(); // Redraw stats for 16:9 modes
-                            Config::save();
-                            Config::requestMachine(arch, romset);
-                            ESPectrum::reset();
-                            return;
-                        }
-#endif
-
-                        if (opt2) {
-                            if (arch != Config::arch || romset != Config::romSet) {
-                                Config::ram_file = "none";
-                                if (romset != Config::romSet) {
-                                    if (arch == "48K") {
-                                        if (Config::pref_romSet_48 == "Last") {
-                                            Config::romSet = romset;
-                                            Config::romSet48 = romset;
-                                        }
-                                    } else if (arch == "128K") {
-                                        if (Config::pref_romSet_128 == "Last") {
-                                            Config::romSet = romset;
-                                            Config::romSet128 = romset;
-                                        }
-                                    } else if (arch == "Pentagon") {
-                                        if (Config::pref_romSetPent == "Last") {
-                                            Config::romSet = romset;
-                                            Config::romSetPent = romset;
-                                        }
-                                    } else if (arch == "P512") {
-                                        if (Config::pref_romSetP512 == "Last") {
-                                            Config::romSet = romset;
-                                            Config::romSetP512 = romset;
-                                        }
-                                    } else if (arch == "P1024") {
-                                        if (Config::pref_romSetP1M == "Last") {
-                                            Config::romSet = romset;
-                                            Config::romSetP1M = romset;
-                                        }
-                                    } else {
-                                        Config::romSet = romset;
-                                    }
-                                }
-                                if (arch != Config::arch) {
-                                    if (Config::pref_arch == "Last") {
-                                        Config::arch = arch;
-                                    }
-                                }
-                                // Mutual exclusivity
-#if !PICO_RP2040
-                                bool isByte = (romset == "48Kby" || romset == "128Kby");
-                                if (Config::mb02 && (arch == "Pentagon" || arch == "P512" || arch == "P1024" ||
-                                    isByte)) {
-                                    Config::mb02 = 0;
-                                    MB02::init();
-                                    OSD::osdCenteredMsg("MB-02+ disabled", LEVEL_WARN, 2000);
-                                }
-                                if (Config::timex_video && isByte) {
-                                    Config::timex_video = false;
-                                    VIDEO::timex_port_ff = 0;
-                                    VIDEO::timex_mode = 0;
-                                    OSD::osdCenteredMsg("Timex disabled", LEVEL_WARN, 2000);
-                                }
-#endif
-                                Config::save();
-                                Config::requestMachine(arch, romset);
-                            }
-
-                            Debug::led_blink();
-                            ESPectrum::reset();
-                            return;
-                        }
-                        menu_curopt = arch_num;
-                        menu_saverect = false;
-                    } else {
-                        menu_curopt = 5;
-                        break;
-                    }
-                }
-            }
-            else if (opt == 6) { // Reset
+            else if (opt == 5) { // Reset
                 // ***********************************************************************************
                 // RESET MENU
                 // ***********************************************************************************
@@ -3648,12 +3254,12 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                             esp_hard_reset();
                         }
                     } else {
-                        menu_curopt = 6;
+                        menu_curopt = 5;
                         break;
                     }
                 }
             }
-            else if (opt == 7) { // Options
+            else if (opt == 6) { // Options
                 // ***********************************************************************************
                 // OPTIONS MENU
                 // ***********************************************************************************
@@ -4480,17 +4086,17 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                                     menu_saverect = false;
                                 }
                             } else {
-                                menu_curopt = 7;
+                                menu_curopt = 6;
                                 break;
                             }
                         }
                     } else {
-                        menu_curopt = 7;
+                        menu_curopt = 6;
                         break;
                     }
                 }
             }
-            else if (opt == 8) { // Debug
+            else if (opt == 7) { // Debug
                 // DEBUG MENU
                 menu_saverect = true;
                 menu_curopt = 1;
@@ -4518,12 +4124,12 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                         Z80::triggerNMI();
                         return;
                     } else {
-                        menu_curopt = 8;
+                        menu_curopt = 7;
                         break;
                     }
                 }
             }
-            else if (opt == 9) { // Hardware
+            else if (opt == 8) { // Hardware
                 // ***********************************************************************************
                 // HARDWARE MENU
                 // ***********************************************************************************
@@ -4737,12 +4343,12 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                         }
                     }
                     else {
-                        menu_curopt = 9;
+                        menu_curopt = 8;
                         break;
                     }
                 }
             }
-            else if (opt == 10) { // ZX Keyboard — bitmap overlay
+            else if (opt == 9) { // ZX Keyboard — bitmap overlay
                 // Protect OSD area from Z80 video renderer overwrite
                 bool kbd_osd_enabled = (VIDEO::OSD != 0);
                 if (!kbd_osd_enabled) {
@@ -4794,7 +4400,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                 if (VIDEO::OSD) OSD::drawStats();
                 return;
             }
-            else if (opt == 11) { // Help — dynamic from hotkeys
+            else if (opt == 10) { // Help — dynamic from hotkeys
                 // Build index of visible hotkeys (no large buffer needed)
                 auto descs = Config::lang ? hkDescES : hkDescEN;
                 const int maxCols = osdMaxCols();
@@ -4887,7 +4493,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                 if (VIDEO::OSD) OSD::drawStats();
                 return;
             }
-            else if (opt == 12) { // About
+            else if (opt == 11) { // About
                 // About
                 // Protect OSD area from Z80 video renderer overwrite
                 bool about_osd_enabled = (VIDEO::OSD != 0);
@@ -5008,7 +4614,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                 return;
             }
 #if TFT
-            else if (FileUtils::fsMount && opt == 13) { // TFT
+            else if (FileUtils::fsMount && opt == 12) { // TFT
                 menu_saverect = true;
                 menu_curopt = 1;
                 while(1) {
@@ -5072,7 +4678,7 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool ALT, bool CTRL) {
                             TFT_FLAGS = prev_flags;
                         }
                     } else {
-                        menu_curopt = 9;
+                        menu_curopt = 8;
                         break;
                     }
                 }

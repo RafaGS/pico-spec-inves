@@ -508,7 +508,6 @@ static const char *MENU_ESX_EJECT[2]     = { "Eject disk\n",     "Expulsar disco
     "Storage\t>\n"\
     "Audio\t>\n"\
     "Video\t>\n"\
-	"Machine\t>\n"\
     "Reset\t>\n"\
     "Options\t>\n"\
     "Debug\t>\n"\
@@ -522,7 +521,6 @@ static const char *MENU_ESX_EJECT[2]     = { "Eject disk\n",     "Expulsar disco
     "Almacenamiento\t>\n"\
     "Audio\t>\n"\
     "Video\t>\n"\
-    "Modelo\t>\n"\
     "Resetear\t>\n"\
     "Opciones\t>\n"\
 	"Depurar\t>\n"\
@@ -537,7 +535,6 @@ static const char *MENU_ESX_EJECT[2]     = { "Eject disk\n",     "Expulsar disco
     "Storage\t>\n"\
     "Audio\t>\n"\
     "Video\t>\n"\
-	"Machine\t>\n"\
     "Reset\t>\n"\
     "Options\t>\n"\
     "Debug\t>\n"\
@@ -550,7 +547,6 @@ static const char *MENU_ESX_EJECT[2]     = { "Eject disk\n",     "Expulsar disco
     "Almacenamiento\t>\n"\
     "Audio\t>\n"\
     "Video\t>\n"\
-    "Modelo\t>\n"\
     "Resetear\t>\n"\
     "Opciones\t>\n"\
 	"Depurar\t>\n"\
@@ -566,7 +562,6 @@ static const char *MENU_MAIN[2] = { MENU_MAIN_EN, MENU_MAIN_ES };
     "Storage\t>\n"\
     "Audio\t>\n"\
     "Video\t>\n"\
-	"Machine\t>\n"\
     "Reset\t>\n"\
     "Options\t>\n"\
     "Debug\t>\n"\
@@ -579,7 +574,6 @@ static const char *MENU_MAIN[2] = { MENU_MAIN_EN, MENU_MAIN_ES };
     "Almacenamiento\t>\n"\
     "Audio\t>\n"\
     "Video\t>\n"\
-    "Modelo\t>\n"\
     "Resetear\t>\n"\
     "Opciones\t>\n"\
     "Depurar\t>\n"\

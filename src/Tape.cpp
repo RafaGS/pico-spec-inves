@@ -288,7 +288,7 @@ void Tape::LoadTape(const string& mFile_) {
         ) {
                 OSD::osdCenteredMsg(OSD_TAPE_FLASHLOAD, LEVEL_INFO, 100);
                 uint8_t OSDprev = VIDEO::OSD;
-                if (Z80Ops::is48)
+                if (Z80Ops::is48 || Z80Ops::isInves)
                     FileZ80::loader48();
                 else
                     FileZ80::loader128();
@@ -324,7 +324,7 @@ void Tape::LoadTape(const string& mFile_) {
         ) {
                 OSD::osdCenteredMsg(OSD_TAPE_FLASHLOAD, LEVEL_INFO, 100);
                 uint8_t OSDprev = VIDEO::OSD;
-                if (Z80Ops::is48)
+                if (Z80Ops::is48 || Z80Ops::isInves)
                     FileZ80::loader48();
                 else
                     FileZ80::loader128();
@@ -358,7 +358,7 @@ void Tape::LoadTape(const string& mFile_) {
         ) {
                 OSD::osdCenteredMsg(OSD_TAPE_FLASHLOAD, LEVEL_INFO, 100);
                 uint8_t OSDprev = VIDEO::OSD;
-                if (Z80Ops::is48)
+                if (Z80Ops::is48 || Z80Ops::isInves)
                     FileZ80::loader48();
                 else
                     FileZ80::loader128();
